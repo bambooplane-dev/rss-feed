@@ -1,3 +1,5 @@
+import pytest
+
 from aggregator.models import FeedSource
 from aggregator.config import load_feeds
 
@@ -20,3 +22,15 @@ def test_load_real_feeds_file_has_expected_shape():
     assert len(feeds) >= 14
     assert all(f.name and f.url and f.tag for f in feeds)
     assert all(f.tier in (1, 2, 3) for f in feeds)
+
+
+def test_load_feeds_missing_tier_raises_clear_error(tmp_path):
+    p = tmp_path / "feeds.yaml"
+    p.write_text(
+        "feeds:\n"
+        "  - name: Example\n"
+        "    url: https://ex.com/feed\n"
+        "    tag: ex\n"
+    )
+    with pytest.raises(ValueError, match="tier"):
+        load_feeds(str(p))

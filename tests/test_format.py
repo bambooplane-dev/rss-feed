@@ -35,3 +35,9 @@ def test_format_message_omits_empty_summary_block():
     # url line directly reachable; no double-blank summary body
     assert "https://ex.com/a" in msg
     assert "\n\n\n" not in msg
+
+
+def test_format_message_escapes_url_ampersand():
+    msg = format_message(_article(url="https://ex.com/a?x=1&y=2"))
+    assert "https://ex.com/a?x=1&amp;y=2" in msg
+    assert "x=1&y=2" not in msg

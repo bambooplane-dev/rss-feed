@@ -1,5 +1,7 @@
 from datetime import datetime, timezone
 
+import pytest
+
 import aggregator.main as m
 from aggregator.models import Article, FeedSource
 
@@ -90,3 +92,40 @@ def test_collect_articles_isolates_failing_feed(monkeypatch):
     with httpx.Client(transport=httpx.MockTransport(lambda r: httpx.Response(200))) as client:
         out = m.collect_articles([good, bad], client)
     assert len(out) == 1  # bad feed skipped, good feed kept
+
+
+def test_failed_send_isolated_and_progress_persisted(tmp_path, monkeypatch):
+    state = str(tmp_path / "state.json")
+    feeds_file = tmp_path / "feeds.yaml"
+    feeds_file.write_text("feeds:\n  - name: S\n    url: https://ex.com/feed\n    tag: s\n    tier: 1\n")
+
+    from aggregator.state import save_state
+    save_state(state, ["a"])  # 'a' already seen
+
+    monkeypatch.setattr(
+        m, "collect_articles",
+        lambda feeds, client: [_article("b", 9), _article("c", 10), _article("d", 11)],
+    )
+
+    calls = []
+
+    def fake_send(text, token, chat_id, client, **k):
+        calls.append(text)
+        if len(calls) == 2:
+            raise RuntimeError("boom")
+
+    monkeypatch.setattr(m, "send_message", fake_send)
+
+    posted = m.run(feeds_path=str(feeds_file), state_path=state,
+                    token="T", chat_id="1", send_delay=0)
+
+    assert posted == 1
+    from aggregator.state import load_state
+    assert set(load_state(state)) == {"a", "b"}
+    assert "c" not in load_state(state)
+    assert "d" not in load_state(state)
+
+
+def test_run_requires_credentials_unless_dry_run():
+    with pytest.raises(ValueError):
+        m.run(feeds_path="feeds.yaml", state_path="unused", token="", chat_id="", send_delay=0)

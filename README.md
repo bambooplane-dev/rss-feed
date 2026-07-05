@@ -6,7 +6,9 @@ lives in `state.json`, committed back to the repo each run.
 
 ## Sources
 
-Edit `feeds.yaml` — one `{ name, url, tag }` entry per feed. No code change needed.
+Edit `feeds.yaml` — one `{ name, url, tag, tier }` entry per feed. No code change needed.
+`tier` is a required integer matching the source's tier: `1` = core news, `2` = labs/primary,
+`3` = analysis.
 
 ## One-time setup
 

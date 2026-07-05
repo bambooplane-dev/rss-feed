@@ -40,6 +40,8 @@ def run(
     dry_run: bool = False,
     send_delay: float = 3.5,
 ) -> int:
+    if not dry_run and (not token or not chat_id):
+        raise ValueError("TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID must be set (or use --dry-run)")
     feeds = load_feeds(feeds_path)
     with httpx.Client() as client:
         articles = collect_articles(feeds, client)
@@ -56,22 +58,29 @@ def run(
     new.sort(key=lambda a: a.published or _EPOCH)
 
     posted_ids = list(seen)
+    sent_count = 0
     with httpx.Client() as client:
         for i, article in enumerate(new):
             text = format_message(article, tz)
             if dry_run:
                 print(text)
                 print("---")
-            else:
+                sent_count += 1
+                continue
+            try:
                 send_message(text, token, chat_id, client)
-                if i < len(new) - 1:
-                    time.sleep(send_delay)
+            except Exception as exc:  # noqa: BLE001 - isolate a failing send; unsent ids retry next run
+                log.warning("send failed for %s (%s); stopping this run", article.url, exc)
+                break
             posted_ids.append(article.id)
+            sent_count += 1
+            if i < len(new) - 1:
+                time.sleep(send_delay)
 
     if not dry_run:
         save_state(state_path, posted_ids)
-    log.info("posted %d new articles", len(new))
-    return len(new)
+    log.info("%sposted %d new article(s)", "[dry-run] would have " if dry_run else "", sent_count)
+    return sent_count
 
 
 def main() -> None:

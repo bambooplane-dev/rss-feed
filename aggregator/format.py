@@ -15,5 +15,5 @@ def format_message(article: Article, tz: str = "UTC") -> str:
     parts = [f"🔹 <b>{title}</b>", f"{source} · {when}"]
     if article.summary:
         parts += ["", html.escape(article.summary)]
-    parts += ["", article.url, f"#{article.tag}"]
+    parts += ["", html.escape(article.url), f"#{html.escape(article.tag)}"]
     return "\n".join(parts)
