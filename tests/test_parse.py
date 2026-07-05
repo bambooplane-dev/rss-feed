@@ -4,7 +4,7 @@ from pathlib import Path
 from aggregator.models import FeedSource
 from aggregator.parse import parse_feed, normalize_url, clean_summary
 
-SOURCE = FeedSource(name="Test Source", url="https://ex.com/feed", tag="test")
+SOURCE = FeedSource(name="Test Source", url="https://ex.com/feed", tag="test", tier=1)
 FIX = Path("tests/fixtures")
 
 

@@ -7,6 +7,7 @@ class FeedSource:
     name: str
     url: str
     tag: str
+    tier: int
 
 
 @dataclass(frozen=True)

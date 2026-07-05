@@ -2,42 +2,56 @@ feeds:
   - name: MIT Technology Review AI
     url: https://www.technologyreview.com/topic/artificial-intelligence/feed
     tag: mittr
+    tier: 1
   - name: Ars Technica AI
     url: https://arstechnica.com/ai/feed/
     tag: arstechnica
+    tier: 1
   - name: The Verge AI
     url: https://www.theverge.com/rss/ai-artificial-intelligence/index.xml
     tag: theverge
+    tier: 1
   - name: TechCrunch AI
     url: https://techcrunch.com/category/artificial-intelligence/feed/
     tag: techcrunch
+    tier: 1
   - name: Wired AI
     url: https://www.wired.com/feed/tag/ai/latest/rss
     tag: wired
+    tier: 1
   - name: AI News
     url: https://www.artificialintelligence-news.com/feed/
     tag: ainews
+    tier: 1
   - name: Towards Data Science
     url: https://towardsdatascience.com/feed
     tag: tds
+    tier: 1
   - name: OpenAI
     url: https://openai.com/news/rss.xml
     tag: openai
+    tier: 2
   - name: Google DeepMind
     url: https://deepmind.google/blog/rss.xml
     tag: deepmind
+    tier: 2
   - name: Google AI
     url: https://blog.google/technology/ai/rss/
     tag: googleai
+    tier: 2
   - name: Import AI
     url: https://jack-clark.net/feed/
     tag: importai
+    tier: 3
   - name: Simon Willison
     url: https://simonwillison.net/atom/everything/
     tag: simonw
+    tier: 3
   - name: The Gradient
     url: https://thegradient.pub/rss/
     tag: gradient
+    tier: 3
   - name: Berkeley BAIR
     url: https://bair.berkeley.edu/blog/feed.xml
     tag: bair
+    tier: 3
