@@ -921,7 +921,7 @@ def _article(id_, hour):
 def test_first_run_seeds_and_posts_nothing(tmp_path, monkeypatch):
     state = str(tmp_path / "state.json")
     feeds_file = tmp_path / "feeds.yaml"
-    feeds_file.write_text("feeds:\n  - name: S\n    url: https://ex.com/feed\n    tag: s\n")
+    feeds_file.write_text("feeds:\n  - name: S\n    url: https://ex.com/feed\n    tag: s\n    tier: 1\n")
 
     monkeypatch.setattr(m, "collect_articles", lambda feeds, client: [_article("a", 9), _article("b", 10)])
     sent = []
@@ -940,7 +940,7 @@ def test_first_run_seeds_and_posts_nothing(tmp_path, monkeypatch):
 def test_second_run_posts_only_new_in_time_order(tmp_path, monkeypatch):
     state = str(tmp_path / "state.json")
     feeds_file = tmp_path / "feeds.yaml"
-    feeds_file.write_text("feeds:\n  - name: S\n    url: https://ex.com/feed\n    tag: s\n")
+    feeds_file.write_text("feeds:\n  - name: S\n    url: https://ex.com/feed\n    tag: s\n    tier: 1\n")
 
     from aggregator.state import save_state
     save_state(state, ["a"])  # 'a' already seen
@@ -963,7 +963,7 @@ def test_second_run_posts_only_new_in_time_order(tmp_path, monkeypatch):
 def test_dry_run_does_not_send_or_persist(tmp_path, monkeypatch, capsys):
     state = str(tmp_path / "state.json")
     feeds_file = tmp_path / "feeds.yaml"
-    feeds_file.write_text("feeds:\n  - name: S\n    url: https://ex.com/feed\n    tag: s\n")
+    feeds_file.write_text("feeds:\n  - name: S\n    url: https://ex.com/feed\n    tag: s\n    tier: 1\n")
     from aggregator.state import save_state
     save_state(state, ["a"])
 
