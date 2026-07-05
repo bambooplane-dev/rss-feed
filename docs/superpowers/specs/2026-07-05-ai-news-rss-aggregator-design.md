@@ -96,9 +96,16 @@ Notes carried forward for implementation:
 
 ## 5. Stack
 
-- **Python 3**
-- `feedparser` — RSS/Atom parsing (handles both formats + malformed feeds)
-- `httpx` (or `requests`) — feed fetching + Telegram Bot API calls
+- **Python 3.13**
+- `feedparser==6.0.12` — RSS/Atom parsing (handles both formats + malformed feeds).
+  Note: feedparser does **not** fetch; we fetch bytes with httpx and hand the
+  content to feedparser.
+- `httpx==0.28.1` — feed fetching + Telegram Bot API calls (explicit timeouts).
+- `PyYAML` — read `feeds.yaml`.
+- Standard-library **`zoneinfo`** for timezone-aware timestamp formatting (§7) —
+  no third-party tz dependency.
+- Dependencies pinned in **`requirements.txt`** for reproducible CI runs (enables
+  `actions/setup-python` pip caching, §9).
 - No database; state is a JSON file in the repo (§6).
 
 ## 6. State & deduplication
@@ -107,6 +114,9 @@ Notes carried forward for implementation:
   metadata such as last-run timestamp).
 - **Dedup id** = feed entry `guid`/`id`; fallback to a **normalized URL**
   (strip tracking query params, trailing slash, scheme-normalize) when no guid.
+- **Malformed feeds:** feedparser sets a `bozo` flag instead of raising. Log the
+  `bozo` reason but **still use whatever entries parsed** — do not discard the
+  whole feed on a bozo bit.
 - **First run** seeds every currently-present item as "seen" and **posts nothing**,
   preventing a backlog dump. Subsequent runs post only ids not in state.
 - After a successful run, newly-posted ids are added and `state.json` is
@@ -142,10 +152,25 @@ Telegram HTML parse mode:
 
 ## 9. Hosting & scheduling — GitHub Actions
 
-- A cron-scheduled workflow runs the script (default **07:00 and 18:00** local;
-  expressed in UTC in the cron, adjusted for the user's timezone).
-- Steps: checkout → set up Python → install deps → run aggregator → commit
-  updated `state.json` back to the repo.
+- **Schedule:** cron with an explicit **IANA `TZ`** (GitHub Actions supports a
+  timezone in the schedule, so no manual UTC conversion). Default **~07:17 and
+  ~18:17** in the user's timezone.
+  - **Off-peak minutes on purpose:** scheduled runs can be delayed at high load,
+    *especially at the top of every hour*, and over-loaded jobs may be dropped.
+    Avoid `:00`; treat delivery time as **approximate**, not punctual.
+- **Steps:** `actions/checkout@v6` → `actions/setup-python@v6` (`cache: 'pip'`)
+  → `pip install -r requirements.txt` → run aggregator → commit updated
+  `state.json` back to the repo.
+- **Commit-back permissions:** workflow sets `permissions: contents: write` and
+  relies on checkout's default `persist-credentials: true`. Pushes made with the
+  default `GITHUB_TOKEN` **do not trigger another workflow run**, so committing
+  `state.json` each run cannot cause a recursive loop.
+- **`concurrency` group** (e.g. `group: aggregator`, `cancel-in-progress: false`)
+  serializes runs so two overlapping runs never race on committing `state.json`.
+- **Private repo recommended:** the 60-day-inactivity auto-disable of scheduled
+  workflows applies to **public** repos only. A private repo sidesteps it
+  entirely (our per-run `state.json` commit would also keep a public repo alive,
+  but only while items keep flowing).
 - **Always-on, free, no server.** Later the agent/Bank-of-Themes can live in the
   same or a sibling repo.
 
@@ -162,8 +187,13 @@ Telegram HTML parse mode:
 - **Telegram send failures:** retry with backoff; if a message ultimately fails,
   its id is **not** marked seen, so it retries next run (accept possible rare dup
   over silent loss).
-- **Fetch etiquette:** timeouts on all HTTP calls; normal User-Agent header;
-  respect Telegram rate limits (small delay between sends).
+- **Telegram rate limits (single channel ~20 messages/minute):** because we post
+  one message per article, insert a **~3–4s delay between sends**, and on an HTTP
+  `429` honor the `retry_after` value from the response as authoritative before
+  retrying. Message body kept well under Telegram's 4096-char limit via the
+  ~300-char summary truncation (§7).
+- **Fetch etiquette:** explicit timeouts on all HTTP calls; a normal browser-like
+  `User-Agent` header (some sources — Verge/Ars/Wired — block default clients).
 - Optional: on repeated failure of a specific feed, include a brief notice.
 
 ## 12. Testing
