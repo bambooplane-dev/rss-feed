@@ -146,8 +146,12 @@ Telegram HTML parse mode:
 
 ## 8. Configuration
 
-- **`feeds.yaml`** — list of `{ name, url, tag }`. Adding/removing a source is a
-  one-line edit, no code change.
+- **`feeds.yaml`** — list of `{ name, url, tag, tier }`. Adding/removing a source
+  is a one-line edit, no code change.
+- **`tier`** is an integer (1/2/3) recording the source's editorial tier from §4
+  (1 = core news, 2 = labs/primary, 3 = analysis/newsletters). It is carried on
+  `FeedSource` so a future consumer (e.g. the filtering agent) can weight or
+  group by source importance; it does not affect current output.
 - Cadence and schedule live in the GitHub Actions workflow (§9).
 
 ## 9. Hosting & scheduling — GitHub Actions

@@ -67,7 +67,7 @@ rss-feed/
 **Interfaces:**
 - Consumes: nothing
 - Produces:
-  - `FeedSource(name: str, url: str, tag: str)` — frozen dataclass
+  - `FeedSource(name: str, url: str, tag: str, tier: int)` — frozen dataclass
   - `Article(id: str, title: str, url: str, source: str, tag: str, published: datetime | None, summary: str)` — frozen dataclass
   - `load_feeds(path: str) -> list[FeedSource]`
 
@@ -99,48 +99,65 @@ testpaths = ["tests"]
 
 ```yaml
 feeds:
+  # Tier 1 — core news
   - name: MIT Technology Review AI
     url: https://www.technologyreview.com/topic/artificial-intelligence/feed
     tag: mittr
+    tier: 1
   - name: Ars Technica AI
     url: https://arstechnica.com/ai/feed/
     tag: arstechnica
+    tier: 1
   - name: The Verge AI
     url: https://www.theverge.com/rss/ai-artificial-intelligence/index.xml
     tag: theverge
+    tier: 1
   - name: TechCrunch AI
     url: https://techcrunch.com/category/artificial-intelligence/feed/
     tag: techcrunch
+    tier: 1
   - name: Wired AI
     url: https://www.wired.com/feed/tag/ai/latest/rss
     tag: wired
+    tier: 1
   - name: AI News
     url: https://www.artificialintelligence-news.com/feed/
     tag: ainews
+    tier: 1
   - name: Towards Data Science
     url: https://towardsdatascience.com/feed
     tag: tds
+    tier: 1
+  # Tier 2 — primary sources / labs
   - name: OpenAI
     url: https://openai.com/news/rss.xml
     tag: openai
+    tier: 2
   - name: Google DeepMind
     url: https://deepmind.google/blog/rss.xml
     tag: deepmind
+    tier: 2
   - name: Google AI
     url: https://blog.google/technology/ai/rss/
     tag: googleai
+    tier: 2
+  # Tier 3 — analysis & newsletters
   - name: Import AI
     url: https://jack-clark.net/feed/
     tag: importai
+    tier: 3
   - name: Simon Willison
     url: https://simonwillison.net/atom/everything/
     tag: simonw
+    tier: 3
   - name: The Gradient
     url: https://thegradient.pub/rss/
     tag: gradient
+    tier: 3
   - name: Berkeley BAIR
     url: https://bair.berkeley.edu/blog/feed.xml
     tag: bair
+    tier: 3
 ```
 
 - [ ] **Step 3: Write the failing test**
@@ -158,15 +175,17 @@ def test_load_feeds_parses_yaml(tmp_path):
         "  - name: Example\n"
         "    url: https://ex.com/feed\n"
         "    tag: ex\n"
+        "    tier: 1\n"
     )
     feeds = load_feeds(str(p))
-    assert feeds == [FeedSource(name="Example", url="https://ex.com/feed", tag="ex")]
+    assert feeds == [FeedSource(name="Example", url="https://ex.com/feed", tag="ex", tier=1)]
 
 
 def test_load_real_feeds_file_has_expected_shape():
     feeds = load_feeds("feeds.yaml")
     assert len(feeds) >= 14
     assert all(f.name and f.url and f.tag for f in feeds)
+    assert all(f.tier in (1, 2, 3) for f in feeds)
 ```
 
 - [ ] **Step 4: Run test to verify it fails**
@@ -186,6 +205,7 @@ class FeedSource:
     name: str
     url: str
     tag: str
+    tier: int
 
 
 @dataclass(frozen=True)
@@ -211,7 +231,7 @@ def load_feeds(path: str) -> list[FeedSource]:
     with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
     return [
-        FeedSource(name=s["name"], url=s["url"], tag=s["tag"])
+        FeedSource(name=s["name"], url=s["url"], tag=s["tag"], tier=s["tier"])
         for s in data["feeds"]
     ]
 ```
@@ -301,7 +321,7 @@ from pathlib import Path
 from aggregator.models import FeedSource
 from aggregator.parse import parse_feed, normalize_url, clean_summary
 
-SOURCE = FeedSource(name="Test Source", url="https://ex.com/feed", tag="test")
+SOURCE = FeedSource(name="Test Source", url="https://ex.com/feed", tag="test", tier=1)
 FIX = Path("tests/fixtures")
 
 
@@ -962,8 +982,8 @@ def test_dry_run_does_not_send_or_persist(tmp_path, monkeypatch, capsys):
 
 
 def test_collect_articles_isolates_failing_feed(monkeypatch):
-    good = FeedSource(name="Good", url="https://good/feed", tag="g")
-    bad = FeedSource(name="Bad", url="https://bad/feed", tag="b")
+    good = FeedSource(name="Good", url="https://good/feed", tag="g", tier=1)
+    bad = FeedSource(name="Bad", url="https://bad/feed", tag="b", tier=1)
 
     def fake_fetch(url, client):
         if "bad" in url:
